@@ -12,11 +12,61 @@ class _HomePageState extends State<HomePage> {
   List<Icon> _scoreTracker = [];
   int _questionIndex = 0;
   int _totalScore = 0;
+  bool answerWasSelected = false;
+  bool endofQuiz = false;
+  bool correctAnswerWasSelected = false;
+  void _questionsAnswered(answerScore) {
+    setState(() {
+      //answer was selected
+      answerWasSelected = true;
+      //check if answer was correct
+      if (answerScore) {
+        _totalScore++;
+        correctAnswerWasSelected = true;
+      }
+      //adding to the score tracker on top
+      _scoreTracker.add(
+        answerScore
+            ? Icon(Icons.check_circle, color: Colors.green)
+            : Icon(
+                Icons.cancel_rounded,
+                color: Colors.red,
+              ),
+      );
+      // when the quiz ends
+      if (_questionIndex + 1 == _questions.length) {
+        endofQuiz = true;
+      }
+    });
+  }
+
+  void _nextQuestion() {
+    setState(() {
+      _questionIndex++;
+      answerWasSelected = false;
+      correctAnswerWasSelected = false;
+    });
+    //what happens at the end of the quiz
+    if (_questionIndex >= _questions.length) {
+      _resetQuiz();
+    }
+  }
+
+  void _resetQuiz() {
+    setState(() {
+      _questionIndex = 0;
+      _totalScore = 0;
+      _scoreTracker = [];
+      endofQuiz = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('My Quiz'),
+        centerTitle: true,
         backgroundColor: Colors.pink,
       ),
       body: Container(
@@ -40,7 +90,8 @@ class _HomePageState extends State<HomePage> {
               margin: EdgeInsets.only(bottom: 10, left: 30, right: 30),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10.0),
-                color: Colors.deepOrange,
+                color: Colors.white,
+                //deepOrange,
               ),
               child: Center(
                 child: Text(
@@ -48,7 +99,8 @@ class _HomePageState extends State<HomePage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20.0,
-                    color: Colors.white,
+                    color: Colors.black,
+                    //white
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -58,25 +110,60 @@ class _HomePageState extends State<HomePage> {
                     as List<Map<String, Object>>)
                 .map((answer) => Answer(
                       answerText: answer['answerText'].toString(),
+                      answerColor: answerWasSelected
+                          ? (answer['score'] == true
+                              ? Colors.green
+                              : Colors.red)
+                          : Colors.transparent,
+                      answerTap: () {
+                        //if answer was alredy selected then notthing happen on the ontap
+                        if (answerWasSelected) {
+                          return;
+                        }
+                        _questionsAnswered(answer['score']);
+                        //
+                      },
                     )),
             SizedBox(height: 20),
             ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  minimumSize: Size(double.infinity, 40.0),
+                  minimumSize: Size(80, 40.0),
                 ),
                 onPressed: () {
-                  setState(() {
-                    _questionIndex = _questionIndex + 1;
-                  });
+                  if (!answerWasSelected) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                            'Please select the answer before going to the next question')));
+                    return;
+                  }
+                  _nextQuestion();
                 },
-                child: Text('Next question')),
+                child: Text(endofQuiz ? 'Restart Quiz' : 'Next question')),
             Container(
               padding: EdgeInsets.all(20),
               child: Text(
-                '0/9',
+                '${_totalScore.toString()}/${_questions.length}',
                 style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
               ),
             ),
+            if (answerWasSelected)
+              Container(
+                height: 50,
+                width: double.infinity,
+                color: correctAnswerWasSelected ? Colors.green : Colors.red,
+                child: Center(
+                  child: Text(
+                    correctAnswerWasSelected
+                        ? 'Well done, you got right!'
+                        : 'wrong',
+                    style: TextStyle(
+                      fontSize: 15.0,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              )
           ],
         ),
       ),
